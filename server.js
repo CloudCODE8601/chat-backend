@@ -5,6 +5,7 @@ const cors = require('cors');
 const { sequelize } = require('./models');
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
+const friendRoutes = require('./routes/friend');
 const socketService = require('./services/socket');
 require('dotenv').config();
 
@@ -35,7 +36,7 @@ app.get('/ping', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/friend', require('./routes/friend'));
+app.use('/api/friend', friendRoutes);
 
 // Socket.IO
 socketService(io);

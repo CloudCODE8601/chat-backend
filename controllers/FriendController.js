@@ -178,4 +178,4 @@ const FriendController = {
     }
 };
 
-module.exports = FriendControlle
+module.exports = FriendController
