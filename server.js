@@ -35,6 +35,7 @@ app.get('/ping', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/friend', require('./routes/friend'));
 
 // Socket.IO
 socketService(io);
@@ -42,16 +43,14 @@ socketService(io);
 const PORT = process.env.PORT || 3000;
 
 // ✅ Connect DB (non-blocking)
-sequelize.sync()
-    .then(() => console.log("✅ Database connected"))
-    .catch(err => console.error("❌ Database error:", err));
-
-// ✅ ALWAYS start server (critical fix)
-server.listen(PORT, () => {
-    const baseURL = `http://localhost:${PORT}`;
-
-    console.log(`🚀 Server running on ${baseURL}`);
-    console.log(`📌 Auth API: ${baseURL}/api/auth`);
-    console.log(`📌 Chat API: ${baseURL}/api/chat`);
-    console.log(`🔌 Socket.IO: ${baseURL}`);
+sequelize.sync().then(() => {
+    server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}).catch(err => {
+    console.error('Unable to connect to the database:', err);
 });
+
+// server.listen(PORT, () => {
+//     console.log(`🚀 Server running`);
+// });
