@@ -10,12 +10,27 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+
+// Socket.IO setup
 const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: {
+        origin: true,
+        credentials: true
+    }
 });
 
 app.use(cors());
 app.use(express.json());
+
+// ✅ Root route (important for Render health check)
+app.get('/', (req, res) => {
+    res.send('🚀 Server is running');
+});
+
+// ✅ Optional test route
+app.get('/ping', (req, res) => {
+    res.json({ message: 'pong' });
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -26,10 +41,17 @@ socketService(io);
 
 const PORT = process.env.PORT || 3000;
 
-sequelize.sync().then(() => {
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-}).catch(err => {
-    console.error('Unable to connect to the database:', err);
+// ✅ Connect DB (non-blocking)
+sequelize.sync()
+    .then(() => console.log("✅ Database connected"))
+    .catch(err => console.error("❌ Database error:", err));
+
+// ✅ ALWAYS start server (critical fix)
+server.listen(PORT, () => {
+    const baseURL = `http://localhost:${PORT}`;
+
+    console.log(`🚀 Server running on ${baseURL}`);
+    console.log(`📌 Auth API: ${baseURL}/api/auth`);
+    console.log(`📌 Chat API: ${baseURL}/api/chat`);
+    console.log(`🔌 Socket.IO: ${baseURL}`);
 });
