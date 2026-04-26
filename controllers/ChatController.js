@@ -6,16 +6,38 @@ const ChatController = {
         try {
             const chats = await Chat.findAll({
                 where: {
-                    [Op.or]: [{ user1_id: req.user.id }, { user2_id: req.user.id }]
+                    [Op.or]: [
+                        { user1_id: req.user.id },
+                        { user2_id: req.user.id }
+                    ]
                 },
+
                 include: [
-                    { model: User, as: 'User1', attributes: ['id', 'name', 'profile_picture_url', 'is_online', 'last_seen'] },
-                    { model: User, as: 'User2', attributes: ['id', 'name', 'profile_picture_url', 'is_online', 'last_seen'] },
-                    { model: Message, as: 'LastMessage' }
+                    {
+                        model: User,
+                        as: 'User1',
+                        attributes: ['id', 'name', 'profile_picture_url', 'is_online', 'last_seen']
+                    },
+                    {
+                        model: User,
+                        as: 'User2',
+                        attributes: ['id', 'name', 'profile_picture_url', 'is_online', 'last_seen']
+                    },
+                    {
+                        model: Message,
+                        as: 'LastMessage',
+                        required: false // ✅ IMPORTANT FIX (prevents join crash)
+                    }
                 ],
-                order: [['updated_at', 'DESC']]
+
+                // ✅ SAFE ORDERING (no DB crash)
+                order: [
+                    ['updatedAt', 'DESC']
+                ]
             });
+
             res.json(chats);
+
         } catch (error) {
             res.status(500).json({ message: error.message });
         }
