@@ -41,7 +41,8 @@ const Chat = sequelize.define('Chat', {
     }
 }, {
     tableName: 'chats',
-    underscored: true
+    underscored: true,
+    timestamps: true
 });
 
 const Message = sequelize.define('Message', {
@@ -61,7 +62,8 @@ const Message = sequelize.define('Message', {
     }
 }, {
     tableName: 'messages',
-    underscored: true
+    underscored: true,
+    timestamps: true
 });
 
 // =====================
