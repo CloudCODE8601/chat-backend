@@ -17,9 +17,20 @@ const socketService = (io) => {
             const message = await Message.create({ chat_id: chatId, sender_id: senderId, receiver_id: receiverId, content });
             await Chat.update({ last_message_id: message.id }, { where: { id: chatId } });
 
+            const sender = await User.findByPk(
+                senderId,
+                {
+                    attributes: ['id', 'name', 'profile_picture_url', 'is_online', 'last_seen'],
+                }
+            );
+
+            const messageWithSender = {
+                ...message.toJSON(),
+                sender
+            };
             const receiverSocketId = onlineUsers.get(receiverId);
             if (receiverSocketId) {
-                io.to(receiverSocketId).emit('receive_message', message);
+                io.to(receiverSocketId).emit('receive_message', messageWithSender);
             }
             socket.emit('message_sent', message);
         });
