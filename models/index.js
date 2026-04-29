@@ -2,10 +2,6 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 const User = require('./User');
 
-// =====================
-// MODELS
-// =====================
-
 const FriendRequest = sequelize.define('FriendRequest', {
     id: {
         type: DataTypes.UUID,
@@ -27,6 +23,10 @@ const Friendship = sequelize.define('Friendship', {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true
+    },
+    chat_id: {
+        type: DataTypes.UUID,
+        allowNull: true
     }
 }, {
     tableName: 'friendships',
