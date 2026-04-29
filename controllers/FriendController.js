@@ -26,41 +26,40 @@ const FriendController = {
     // Send friend request
     sendFriendRequest: async (req, res) => {
         try {
-            const { receiverId } = req.body;
-            const senderId = req.user.id;
+            const { receiverId } = req.body, senderId = req.user.id;
 
-            // Check if already friends
-            const existingFriendship = await Friendship.findOne({
+            if (senderId == receiverId)
+                return res.status(400).json({ message: 'Invalid request' });
+
+            if (await Friendship.findOne({
                 where: {
-                    [Op.or]: [
-                        { user1_id: senderId, user2_id: receiverId },
-                        { user1_id: receiverId, user2_id: senderId }
-                    ]
+                    user1_id: [senderId, receiverId],
+                    user2_id: [senderId, receiverId]
                 }
-            });
-
-            if (existingFriendship) {
+            })) {
                 return res.status(400).json({ message: 'Already friends' });
             }
 
-            // Check if request already exists
-            const existingRequest = await FriendRequest.findOne({
-                where: { sender_id: senderId, receiver_id: receiverId }
-            });
-
-            if (existingRequest) {
-                return res.status(400).json({ message: 'Friend request already sent' });
+            if (await FriendRequest.findOne({
+                where: {
+                    sender_id: [senderId, receiverId],
+                    receiver_id: [senderId, receiverId],
+                    status: 'pending'
+                }
+            })) {
+                return res.status(400).json({ message: 'Request already pending' });
             }
 
-            const friendRequest = await FriendRequest.create({
-                sender_id: senderId,
-                receiver_id: receiverId,
-                status: 'pending'
-            });
+            res.status(201).json(
+                await FriendRequest.create({
+                    sender_id: senderId,
+                    receiver_id: receiverId,
+                    status: 'pending'
+                })
+            );
 
-            res.status(201).json(friendRequest);
-        } catch (error) {
-            res.status(500).json({ message: error.message });
+        } catch (e) {
+            res.status(500).json({ message: e.message });
         }
     },
 
