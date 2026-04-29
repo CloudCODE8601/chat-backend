@@ -147,9 +147,13 @@ const FriendController = {
                 ]
             });
 
-            const friendList = friends.map(f =>
-                f.user1_id === req.user.id ? f.User2 : f.User1
-            );
+            const friendList = friends.map(f => ({
+                ...(f.user1_id === req.user.id
+                    ? f.User2
+                    : f.User1
+                ).toJSON(),
+                chat_id: f.chat_id
+            }));
 
             res.json(friendList);
         } catch (error) {
