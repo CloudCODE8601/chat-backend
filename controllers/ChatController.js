@@ -20,6 +20,18 @@ const ChatController = {
                     user1_id: req.user.id,
                     user2_id: friend_id
                 });
+
+                await Friendship.update(
+                    { chat_id: chat.id },
+                    {
+                        where: {
+                            [Op.or]: [
+                                { user1_id: myId, user2_id: friend_id },
+                                { user1_id: friend_id, user2_id: myId }
+                            ]
+                        }
+                    }
+                );
             }
 
             res.json(chat);
