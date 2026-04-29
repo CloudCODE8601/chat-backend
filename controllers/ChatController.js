@@ -1,4 +1,4 @@
-const { Chat, Message, User } = require('../models');
+const { Chat, Message, User, Friendship } = require('../models');
 const { Op } = require('sequelize');
 
 const ChatController = {
