@@ -1,8 +1,9 @@
-const { User, FriendRequest, Friendship } = require('../models');
+const { User } = require('../models');
 const { Op } = require('sequelize');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs'); // ✅ MISSING IMPORT
 
 const UserController = {
+
     getProfile: async (req, res) => {
         try {
             const user = await User.findByPk(req.user.id, {
@@ -15,6 +16,10 @@ const UserController = {
                     'last_seen'
                 ]
             });
+
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
 
             res.json(user);
         } catch (e) {
@@ -29,7 +34,6 @@ const UserController = {
 
             let profile_picture_url = req.body.profile_picture_url;
 
-            // if using file upload (optional)
             if (req.file) {
                 profile_picture_url = `/uploads/${req.file.filename}`;
             }
@@ -49,6 +53,7 @@ const UserController = {
             });
 
             res.json(user);
+
         } catch (e) {
             res.status(500).json({ message: e.message });
         }
@@ -59,11 +64,27 @@ const UserController = {
             const userId = req.user.id;
             const { oldPassword, newPassword } = req.body;
 
+            if (!oldPassword || !newPassword) {
+                return res.status(400).json({
+                    message: 'All fields required'
+                });
+            }
+
+            if (newPassword.length < 6) {
+                return res.status(400).json({
+                    message: 'Password must be at least 6 characters'
+                });
+            }
+
             const user = await User.findByPk(userId);
+
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
 
             const isMatch = await bcrypt.compare(
                 oldPassword,
-                user.password
+                user.password_hash
             );
 
             if (!isMatch) {
@@ -74,7 +95,7 @@ const UserController = {
 
             const hashed = await bcrypt.hash(newPassword, 10);
 
-            await user.update({ password: hashed });
+            await user.update({ password_hash: hashed });
 
             res.json({ message: 'Password updated' });
 
@@ -84,4 +105,4 @@ const UserController = {
     }
 };
 
-module.exports = UserController
+module.exports = UserController;
