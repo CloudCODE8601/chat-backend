@@ -1,6 +1,7 @@
+// controllers\UserController.js
 const { User } = require('../models');
 const { Op } = require('sequelize');
-const bcrypt = require('bcryptjs'); // ✅ MISSING IMPORT
+const bcrypt = require('bcryptjs');
 
 const UserController = {
 
