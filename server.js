@@ -27,7 +27,7 @@ app.use(cors({
 app.use(express.json());
 
 // Preflight handler
-app.options('*', cors());
+app.options(/.*/, cors());
 
 // Routes
 app.use('/api', meetingRoutes);
