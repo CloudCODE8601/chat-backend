@@ -4,91 +4,97 @@ module.exports = (io) => {
     io.on('connection', (socket) => {
         console.log(`User connected: ${socket.id}`);
 
-        // Join Meeting
+        // ================= JOIN =================
         socket.on('join-room', ({ meetingId, userId, userName }) => {
             const room = roomStore.getRoom(meetingId);
+
             if (!room) {
                 socket.emit('error', { message: 'Meeting not found' });
                 return;
             }
 
             socket.join(meetingId);
-            
-            // Store user info in socket session
+
+            // store on socket
             socket.userId = userId;
             socket.userName = userName;
             socket.meetingId = meetingId;
 
-            // Add participant to roomStore
-            if (!room.participants.find(p => p.userId === userId)) {
-                room.participants.push({ userId, userName, socketId: socket.id });
-            }
+            // save participant
+            room.participants.push({
+                userId,
+                userName,
+                socketId: socket.id,
+            });
 
-            console.log(`User ${userName} (${userId}) joined room: ${meetingId}`);
+            console.log(`User ${userName} (${socket.id}) joined room: ${meetingId}`);
 
-            // Notify others in the room
+            // 🔥 Send existing users to NEW user (IMPORTANT)
+            const existingUsers = room.participants
+                .filter(p => p.socketId !== socket.id)
+                .map(p => ({
+                    socketId: p.socketId,
+                    userName: p.userName,
+                }));
+
+            socket.emit('existing-users', existingUsers);
+
+            // 🔥 Notify others
             socket.to(meetingId).emit('user-joined', {
-                userId,
+                socketId: socket.id,
                 userName,
-                socketId: socket.id
-            });
-
-            // Send current participants to the new user
-            const otherParticipants = room.participants.filter(p => p.userId !== userId);
-            socket.emit('all-users', otherParticipants);
-        });
-
-        // WebRTC Signaling: Offer
-        socket.on('offer', ({ offer, to, from, userName }) => {
-            console.log(`Sending offer from ${from} to ${to}`);
-            io.to(to).emit('offer', { offer, from, userName });
-        });
-
-        // WebRTC Signaling: Answer
-        socket.on('answer', ({ answer, to, from }) => {
-            console.log(`Sending answer from ${from} to ${to}`);
-            io.to(to).emit('answer', { answer, from });
-        });
-
-        // WebRTC Signaling: ICE Candidate
-        socket.on('ice-candidate', ({ candidate, to, from }) => {
-            console.log(`Sending ICE candidate from ${from} to ${to}`);
-            io.to(to).emit('ice-candidate', { candidate, from });
-        });
-
-        // Chat Message
-        socket.on('send-message', ({ message, meetingId, userName, userId }) => {
-            io.to(meetingId).emit('receive-message', {
-                message,
-                userName,
-                userId,
-                timestamp: new Date()
             });
         });
 
-        // Toggle Video/Audio
-        socket.on('toggle-media', ({ meetingId, userId, type, status }) => {
-            socket.to(meetingId).emit('user-media-toggled', { userId, type, status });
+        // ================= OFFER =================
+        socket.on('offer', ({ offer, to, userName }) => {
+            console.log(`Offer: ${socket.id} → ${to}`);
+
+            io.to(to).emit('offer', {
+                offer,
+                from: socket.id, // ✅ FIXED
+                userName,
+            });
         });
 
-        // Leave Meeting
+        // ================= ANSWER =================
+        socket.on('answer', ({ answer, to }) => {
+            console.log(`Answer: ${socket.id} → ${to}`);
+
+            io.to(to).emit('answer', {
+                answer,
+                from: socket.id, // ✅ FIXED
+            });
+        });
+
+        // ================= ICE =================
+        socket.on('ice-candidate', ({ candidate, to }) => {
+            io.to(to).emit('ice-candidate', {
+                candidate,
+                from: socket.id, // ✅ FIXED
+            });
+        });
+
+        // ================= LEAVE =================
         socket.on('disconnect', () => {
-            const { meetingId, userId, userName } = socket;
+            const { meetingId, userName } = socket;
+
             if (meetingId) {
                 const room = roomStore.getRoom(meetingId);
-                if (room) {
-                    room.participants = room.participants.filter(p => p.userId !== userId);
-                    console.log(`User ${userName} left room: ${meetingId}`);
-                    
-                    socket.to(meetingId).emit('user-left', { userId, userName });
 
-                    // Clean up room if empty
-                    if (room.participants.length === 0) {
-                        // Keep for a bit or delete immediately
-                        // roomStore.deleteRoom(meetingId);
-                    }
+                if (room) {
+                    room.participants = room.participants.filter(
+                        p => p.socketId !== socket.id
+                    );
+
+                    console.log(`User ${userName} left room: ${meetingId}`);
+
+                    socket.to(meetingId).emit('user-left', {
+                        socketId: socket.id, // ✅ FIXED
+                    });
                 }
             }
+
             console.log(`User disconnected: ${socket.id}`);
         });
     });
