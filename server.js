@@ -2,11 +2,13 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const meetingRoutes = require('./routes/meetingRoutes');
-const socketHandler = require('./socket/socketHandler');
-
-dotenv.config();
+const { sequelize } = require('./models');
+const authRoutes = require('./routes/auth');
+const chatRoutes = require('./routes/chat');
+const friendRoutes = require('./routes/friend');
+const userRoutes = require('./routes/user');
+const socketService = require('./services/socket');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -14,35 +16,41 @@ const server = http.createServer(app);
 // Socket.IO setup
 const io = new Server(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
+        origin: true,
+        credentials: true
     }
 });
 
-// Middleware
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: false
-}));
-
+app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api', meetingRoutes);
-
-// Health check (optional but useful for Render)
 app.get('/', (req, res) => {
-    res.send('Server is running 🚀');
+    res.send('🚀 Server is running');
 });
 
-// Socket.IO signaling
-socketHandler(io);
-
-// Server start
-const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '0.0.0.0';
-
-server.listen(PORT, HOST, () => {
-    console.log(`Server running on ${HOST}:${PORT}`);
+app.get('/ping', (req, res) => {
+    res.json({ message: 'pong' });
 });
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/friend', friendRoutes);
+app.use('/api/user', userRoutes);
+
+// Socket.IO
+socketService(io);
+
+const PORT = process.env.PORT || 3000;
+
+sequelize.sync().then(() => {
+    server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}).catch(err => {
+    console.error('Unable to connect to the database:', err);
+});
+
+// server.listen(PORT, () => {
+//     console.log(`🚀 Server running`);
+// });
