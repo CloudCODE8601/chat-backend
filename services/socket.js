@@ -13,8 +13,22 @@ const socketService = (io) => {
         });
 
         socket.on('send_message', async (data) => {
+
             const { chatId, senderId, receiverId, content } = data;
-            const message = await Message.create({ chat_id: chatId, sender_id: senderId, receiver_id: receiverId, content });
+
+            // default
+            let status = 'sent';
+
+            // receiver online?
+            const receiverSocketId = onlineUsers.get(receiverId);
+
+            if (receiverSocketId) {
+                status = 'delivered';
+            }
+
+            // create message
+            const message = await Message.create({ chat_id: chatId, sender_id: senderId, receiver_id: receiverId, content, status });
+
             await Chat.update({ last_message_id: message.id }, { where: { id: chatId } });
 
             const sender = await User.findByPk(
@@ -28,11 +42,45 @@ const socketService = (io) => {
                 ...message.toJSON(),
                 sender
             };
-            const receiverSocketId = onlineUsers.get(receiverId);
+
+            // send receiver
             if (receiverSocketId) {
+
                 io.to(receiverSocketId).emit('receive_message', messageWithSender);
             }
-            socket.emit('message_sent', message);
+
+            // sender
+            socket.emit('message_sent', messageWithSender);
+        });
+
+        socket.on('mark_seen', async (data) => {
+
+            const { messageId, senderId, receiverId } = data;
+
+            await Message.update({ status: 'seen' }, { where: { id: messageId } });
+
+            // notify sender
+            const senderSocketId = onlineUsers.get(senderId);
+
+            if (senderSocketId) {
+                io.to(senderSocketId).emit('message_seen', { messageId, senderId, receiverId });
+            }
+
+        });
+
+        socket.on('mark_all_seen', async (data) => {
+
+            const { senderId, chatId } = data;
+
+            await Message.update({ status: 'seen' }, { where: { chat_id: chatId } });
+
+            // notify sender
+            const senderSocketId = onlineUsers.get(senderId);
+
+            if (senderSocketId) {
+                io.to(senderSocketId).emit('message_all_seen', { chatId });
+            }
+
         });
 
         socket.on('typing', (data) => {

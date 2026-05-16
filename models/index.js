@@ -56,9 +56,12 @@ const Message = sequelize.define('Message', {
         allowNull: false
     },
     status: {
-        type: DataTypes.STRING,
-        defaultValue: 'sent',
-        allowNull: false
+        type: DataTypes.ENUM(
+            'sent',
+            'delivered',
+            'seen'
+        ),
+        defaultValue: 'sent'
     }
 }, {
     tableName: 'messages',
