@@ -1,4 +1,5 @@
 const { User, Message, Chat } = require('../models');
+const { Op } = require('sequelize');
 
 const socketService = (io) => {
     const onlineUsers = new Map(); // userId -> socketId
@@ -22,9 +23,9 @@ const socketService = (io) => {
             // receiver online?
             const receiverSocketId = onlineUsers.get(receiverId);
 
-            if (receiverSocketId) {
-                status = 'delivered';
-            }
+            // if (receiverSocketId) {
+            //     status = 'delivered';
+            // }
 
             // create message
             const message = await Message.create({ chat_id: chatId, sender_id: senderId, receiver_id: receiverId, content, status });
@@ -51,6 +52,39 @@ const socketService = (io) => {
 
             // sender
             socket.emit('message_sent', messageWithSender);
+        });
+
+        socket.on('mark_delivered', async (data) => {
+
+            const { senderId, messageId, receiverId } = data;
+
+            await Message.update({ status: 'delivered' }, { where: { id: messageId } });
+
+            const senderSocketId = onlineUsers.get(senderId);
+
+            if (senderSocketId) {
+                io.to(senderSocketId).emit('messages_delivered', { senderId, messageId, receiverId });
+            }
+        });
+
+        socket.on('mark_all_delivered', async (items) => {
+
+            await Message.update({ status: 'delivered' },
+                {
+                    where: {
+                        chat_id: { [Op.in]: items.map(i => i.chatId) },
+                        status: 'sent'
+                    }
+                }
+            );
+
+            items.forEach(i => {
+                const s = onlineUsers.get(i.senderId);
+
+                if (s) {
+                    io.to(s).emit('messages_all_delivered', { chatId: i.chatId });
+                }
+            });
         });
 
         socket.on('mark_seen', async (data) => {
@@ -101,8 +135,9 @@ const socketService = (io) => {
                 }
             }
             if (disconnectedUserId) {
-                await User.update({ is_online: false, last_seen: new Date() }, { where: { id: disconnectedUserId } });
-                io.emit('user_status', { userId: disconnectedUserId, is_online: false, last_seen: new Date() });
+                const lastSeen = new Date();
+                await User.update({ is_online: false, last_seen: lastSeen }, { where: { id: disconnectedUserId } });
+                io.emit('user_status', { userId: disconnectedUserId, is_online: false, last_seen: lastSeen });
             }
         });
     });
