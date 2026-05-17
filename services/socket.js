@@ -76,7 +76,7 @@ const socketService = (io) => {
                     where: {
                         chat_id: { [Op.in]: items.map(i => i.chatId) },
                         status: 'sent',
-                        receiverId: receiverId,
+                        receiver_id: receiverId,
                     }
                 }
             );
