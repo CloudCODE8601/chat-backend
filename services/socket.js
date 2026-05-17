@@ -67,13 +67,16 @@ const socketService = (io) => {
             }
         });
 
-        socket.on('mark_all_delivered', async (items) => {
+        socket.on('mark_all_delivered', async (data) => {
+
+            const { items, receiverId } = data;
 
             await Message.update({ status: 'delivered' },
                 {
                     where: {
                         chat_id: { [Op.in]: items.map(i => i.chatId) },
-                        status: 'sent'
+                        status: 'sent',
+                        receiverId: receiverId,
                     }
                 }
             );
@@ -104,9 +107,9 @@ const socketService = (io) => {
 
         socket.on('mark_all_seen', async (data) => {
 
-            const { senderId, chatId } = data;
+            const { senderId, chatId, receiverId } = data;
 
-            await Message.update({ status: 'seen' }, { where: { chat_id: chatId } });
+            await Message.update({ status: 'seen' }, { where: { chat_id: chatId, receiver_id: receiverId } });
 
             // notify sender
             const senderSocketId = onlineUsers.get(senderId);
